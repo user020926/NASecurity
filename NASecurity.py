@@ -203,6 +203,10 @@ class NASecurity(QMainWindow):
             QLabel {
                 color: #333333;
             }
+            QMessageBox QPushButton {
+                min-width: 80px;
+                margin: 0 auto;
+            }
         """)
 
         self._setup_shortcuts()
