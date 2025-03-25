@@ -41,15 +41,7 @@ class NASClient:
         retry=retry_if_exception_type(requests.RequestException),
         # before_sleep=lambda retry_state: logger.warning(f"重試請求，第 {retry_state.attempt_number} 次")
     )
-    def login(
-        self,
-        account: str,
-        password: str,
-        status_callback: Any,
-        otp_code: str | None = None,
-        clear_password_callback: Callable[[], None] | None = None,
-        clear_otp_callback: Callable[[], None] | None = None
-    ) -> str:
+    def login(self, account: str, password: str, status_callback: Any, otp_code: str | None = None, clear_password_callback: Callable[[], None] | None = None, clear_otp_callback: Callable[[], None] | None = None) -> str:
         """管理員登入"""
         url = self._build_url("auth.cgi")
         params = {
@@ -69,7 +61,7 @@ class NASClient:
 
         if "data" in data and "sid" in data["data"]:
             self.sid = data["data"]["sid"]
-            status_callback.append(f"管理員 {account} 登入成功\n\n")
+            status_callback(f"管理員 {account} 登入成功\n\n", "black")
             return self.sid
 
         error_code = data.get("error", {}).get("code")
@@ -185,14 +177,15 @@ class NASClient:
             data = response.json()
             
             if data.get("success", False):
-                status_callback.append("已登出")
+                status_callback("已登出", "black")
                 # logger.info("管理員成功登出")
                 self.sid = None
                 return True
             
             # logger.warning(f"登出失敗: {data}")
-            status_callback.append(f"登出失敗: {data}")
+            status_callback(f"登出失敗: {data}", "red")
             return False
         except requests.RequestException as e:
             # logger.error(f"登出失敗: {str(e)}")
+            status_callback(f"登出失敗: {data}", "red")
             raise

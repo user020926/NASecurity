@@ -273,7 +273,7 @@ class NASecurity(QMainWindow):
 
         if self.nas_client:
             try:
-                self.nas_client.logout(self.status_text)
+                self.nas_client.logout(lambda msg, color: append_colored_text(self.status_text, msg, color))
             except Exception as e:
                 # logger.warning(f"舊會話登出失敗: {str(e)}")
                 append_colored_text(self.status_text, f"舊會話登出失敗: {str(e)}", "red")
@@ -289,7 +289,7 @@ class NASecurity(QMainWindow):
         self.progress.setFixedSize(400, 150)
 
         try:
-            self.nas_client.login(admin, pwd, self.status_text, otp, self._clear_pwd, self._clear_otp)
+            self.nas_client.login(admin, pwd, lambda msg, color: append_colored_text(self.status_text, msg, color), otp, self._clear_pwd, self._clear_otp)
             df = pd.read_excel(self.filepath).dropna(subset=["帳號"])
             self.progress.setMaximum(len(df))
 
@@ -357,7 +357,7 @@ class NASecurity(QMainWindow):
             self.worker.is_canceled = True
         if self.nas_client:
             try:
-                self.nas_client.logout(self.status_text)
+                self.nas_client.logout(lambda msg, color: append_colored_text(self.status_text, msg, color))
             except Exception as e:
                 # logger.warning(f"取消時登出失敗: {str(e)}")
                 append_colored_text(self.status_text, f"取消時登出失敗: {str(e)}", "red")
@@ -369,9 +369,9 @@ class NASecurity(QMainWindow):
         """視窗關閉時的事件處理"""
         if self.nas_client and self.nas_client.sid:
             try:
-                self.nas_client.logout(self.status_text)
+                self.nas_client.logout(lambda msg, color: append_colored_text(self.status_text, msg, color))
             except Exception as e:
-                # logger.warning(f"關閉時登出失敗: {str(e)}")
+                # logger.warning(f"關閉時   失敗: {str(e)}")
                 append_colored_text(self.status_text, f"關閉時登出失敗: {str(e)}", "red")
         try:
             self.log_manager.save_to_file()
