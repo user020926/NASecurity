@@ -60,7 +60,7 @@ class NASClient:
 
         if "data" in data and "sid" in data["data"]:
             self.sid = data["data"]["sid"]
-            status_callback.append(f"Adimin {account} login successful\n\n")
+            status_callback(f"Adimin {account} login successful\n\n", "black")
             return self.sid
 
         error_code = data.get("error", {}).get("code")
@@ -176,11 +176,12 @@ class NASClient:
             data = response.json()
             
             if data.get("success", False):
-                status_callback.append("Admin logout successful")
+                status_callback("Admin logout successful", "black")
                 self.sid = None
                 return True
             
-            status_callback.append(f"Failed to logout: {data}")
+            status_callback(f"Failed to logout: {data}", "red")
             return False
         except requests.RequestException as e:
+            status_callback(f"Failed to logout: {data}", "red")
             raise
