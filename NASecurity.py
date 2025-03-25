@@ -251,12 +251,7 @@ class NASecurity(QMainWindow):
 
     def _select_file(self):
         """打開檔案選擇對話框"""
-        filepath, _ = QFileDialog.getOpenFileName(
-            self, 
-            "選擇文件", 
-            get_desktop_path(),
-            "Excel files (*.xlsx)"
-        )
+        filepath, _ = QFileDialog.getOpenFileName(self, "選擇文件", get_desktop_path(), "Excel files (*.xlsx)")
         if filepath:
             self.filepath = filepath
             self.file_entry.setText(filepath)
@@ -273,7 +268,8 @@ class NASecurity(QMainWindow):
 
         if self.nas_client:
             try:
-                self.nas_client.logout(lambda msg, color: append_colored_text(self.status_text, msg, color))
+                self.nas_client.logout()
+                append_colored_text(self.status_text, "已登出舊會話", "black")
             except Exception as e:
                 # logger.warning(f"舊會話登出失敗: {str(e)}")
                 append_colored_text(self.status_text, f"舊會話登出失敗: {str(e)}", "red")
@@ -289,7 +285,8 @@ class NASecurity(QMainWindow):
         self.progress.setFixedSize(400, 150)
 
         try:
-            self.nas_client.login(admin, pwd, lambda msg, color: append_colored_text(self.status_text, msg, color), otp, self._clear_pwd, self._clear_otp)
+            self.nas_client.login(admin, pwd, otp, self._clear_pwd, self._clear_otp)
+            append_colored_text(self.status_text, f"管理員 {admin} 登入成功\n\n", "black")
             df = pd.read_excel(self.filepath).dropna(subset=["帳號"])
             self.progress.setMaximum(len(df))
 
@@ -299,7 +296,6 @@ class NASecurity(QMainWindow):
             self.worker.finished.connect(self._process_finished)
             self.worker.start()
         except Exception as e:
-            # self.status_text.append(f"登入失敗: {str(e)}")
             append_colored_text(self.status_text, f"登入失敗: {str(e)}", "red")
             # logger.error(f"登入失敗: {str(e)}")
             self._clear_pwd()
@@ -328,13 +324,11 @@ class NASecurity(QMainWindow):
         """清空密碼欄位"""
         self.pwd_entry.clear()
         # logger.info("管理員密碼欄位已清空")
-        # append_colored_text(self.status_text, "管理員密碼欄位已清空", "black")
 
     def _clear_otp(self):
         """清空雙重驗證碼欄位"""
         self.otp_entry.clear()
         # logger.info("雙重驗證碼欄位已清空")
-        # append_colored_text(self.status_text, "雙重驗證碼欄位已清空", "black")
 
     def _process_finished(self):
         """處理完成後的清理工作"""
@@ -343,10 +337,9 @@ class NASecurity(QMainWindow):
         try:
             self.log_manager.save_to_file()
             # logger.info("日誌已保存至桌面")
-            # append_colored_text(self.status_text, "日誌已保存至桌面", "black")
         except Exception as e:
             # logger.error(f"日誌保存失敗: {str(e)}")
-            # append_colored_text(self.status_text, f"日誌保存失敗: {str(e)}", "red")
+            append_colored_text(self.status_text, f"日誌保存失敗: {str(e)}", "red")
             QMessageBox.critical(self, "錯誤", f"日誌保存失敗: {str(e)}")
         self._clear_pwd()
         self._clear_otp()
@@ -357,7 +350,8 @@ class NASecurity(QMainWindow):
             self.worker.is_canceled = True
         if self.nas_client:
             try:
-                self.nas_client.logout(lambda msg, color: append_colored_text(self.status_text, msg, color))
+                self.nas_client.logout()
+                append_colored_text(self.status_text, "已登出", "black")
             except Exception as e:
                 # logger.warning(f"取消時登出失敗: {str(e)}")
                 append_colored_text(self.status_text, f"取消時登出失敗: {str(e)}", "red")
@@ -369,7 +363,8 @@ class NASecurity(QMainWindow):
         """視窗關閉時的事件處理"""
         if self.nas_client and self.nas_client.sid:
             try:
-                self.nas_client.logout(lambda msg, color: append_colored_text(self.status_text, msg, color))
+                self.nas_client.logout()
+                append_colored_text(self.status_text, "已登出", "black")
             except Exception as e:
                 # logger.warning(f"關閉時   失敗: {str(e)}")
                 append_colored_text(self.status_text, f"關閉時登出失敗: {str(e)}", "red")
@@ -388,7 +383,7 @@ class NASecurity(QMainWindow):
 if __name__ == "__main__":
     """程式入口"""
     app = QApplication(sys.argv)
-    app.setFont(QFont("Arial", 12))
+    app.setFont(QFont("Yu Gothic UI", 12))
     window = NASecurity()
     window.show()
     sys.exit(app.exec_())

@@ -35,13 +35,8 @@ class NASClient:
     def _get_error_message(self, error_code: int) -> str:
         return self.ERROR_MESSAGES.get(error_code, f"未知錯誤 (代碼: {error_code})")
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_fixed(2),
-        retry=retry_if_exception_type(requests.RequestException),
-        # before_sleep=lambda retry_state: logger.warning(f"重試請求，第 {retry_state.attempt_number} 次")
-    )
-    def login(self, account: str, password: str, status_callback: Any, otp_code: str | None = None, clear_password_callback: Callable[[], None] | None = None, clear_otp_callback: Callable[[], None] | None = None) -> str:
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(2), retry=retry_if_exception_type(requests.RequestException))
+    def login(self, account: str, password: str, otp_code: str | None = None, clear_password_callback: Callable[[], None] | None = None, clear_otp_callback: Callable[[], None] | None = None) -> str:
         """管理員登入"""
         url = self._build_url("auth.cgi")
         params = {
@@ -61,7 +56,6 @@ class NASClient:
 
         if "data" in data and "sid" in data["data"]:
             self.sid = data["data"]["sid"]
-            status_callback(f"管理員 {account} 登入成功\n\n", "black")
             return self.sid
 
         error_code = data.get("error", {}).get("code")
@@ -159,7 +153,7 @@ class NASClient:
             raise Exception(f"用戶刪除失敗: {self._get_error_message(error_code)}")
         return result
 
-    def logout(self, status_callback: Any) -> bool:
+    def logout(self) -> bool:
         """登出管理員會話"""
         if not self.sid:
             return True
@@ -172,20 +166,13 @@ class NASClient:
             "_sid": self.sid
         }
         
-        try:
-            response = self.session.get(url, params=params, timeout=10)
-            data = response.json()
+        response = self.session.get(url, params=params, timeout=10)
+        data = response.json()
+        
+        if data.get("success", False):
+            # logger.info("管理員成功登出")
+            self.sid = None
+            return True
+        
+        raise Exception(f"登出失敗: {data}")
             
-            if data.get("success", False):
-                status_callback("已登出", "black")
-                # logger.info("管理員成功登出")
-                self.sid = None
-                return True
-            
-            # logger.warning(f"登出失敗: {data}")
-            status_callback(f"登出失敗: {data}", "red")
-            return False
-        except requests.RequestException as e:
-            # logger.error(f"登出失敗: {str(e)}")
-            status_callback(f"登出失敗: {data}", "red")
-            raise
