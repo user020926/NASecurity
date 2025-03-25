@@ -158,7 +158,7 @@ class NASecurity(QMainWindow):
         self.otp_entry = self._add_field(input_layout, "OTP-code:", "Please enter 6-digit code, leave blank if not")
         self.file_entry = self._add_file_field(input_layout)
         
-        start_btn = QPushButton("Execute")
+        start_btn = QPushButton("Start")
         start_btn.clicked.connect(self._start_process)
         input_layout.addWidget(start_btn)
 
@@ -269,7 +269,8 @@ class NASecurity(QMainWindow):
 
         if self.nas_client:
             try:
-                self.nas_client.logout(lambda msg, color: append_colored_text(self.status_text, msg, color))
+                self.nas_client.logout()
+                append_colored_text(self.status_text, "Logout pervious session", "black")
             except Exception as e:
                 append_colored_text(self.status_text, f"Failed to logout previous session: {str(e)}", "red")
 
@@ -284,7 +285,8 @@ class NASecurity(QMainWindow):
         self.progress.setFixedSize(400, 150)
 
         try:
-            self.nas_client.login(admin, pwd, lambda msg, color: append_colored_text(self.status_text, msg, color), otp, self._clear_pwd, self._clear_otp)
+            self.nas_client.login(admin, pwd, otp, self._clear_pwd, self._clear_otp)
+            append_colored_text(self.status_text, f"Admin {admin} login success\n\n", "black")
             df = pd.read_excel(self.filepath).dropna(subset=["Account"])
             self.progress.setMaximum(len(df))
 
@@ -332,6 +334,7 @@ class NASecurity(QMainWindow):
         try:
             self.log_manager.save_to_file()
         except Exception as e:
+            append_colored_text(self.status_text, f"Failed to save log: {str(e)}", "red")
             QMessageBox.critical(self, "Error", f"Failed to save log: {str(e)}")
         self._clear_pwd()
         self._clear_otp()
@@ -342,7 +345,8 @@ class NASecurity(QMainWindow):
             self.worker.is_canceled = True
         if self.nas_client:
             try:
-                self.nas_client.logout(lambda msg, color: append_colored_text(self.status_text, msg, color))
+                self.nas_client.logout()
+                append_colored_text(self.status_text, "Admin logout successful", "black")
             except Exception as e:
                 append_colored_text(self.status_text, f"Failed to logout during cancelation: {str(e)}", "red")
         self._clear_pwd()
@@ -353,7 +357,8 @@ class NASecurity(QMainWindow):
         """Event handling when the window is closed"""
         if self.nas_client and self.nas_client.sid:
             try:
-                self.nas_client.logout(lambda msg, color: append_colored_text(self.status_text, msg, color))
+                self.nas_client.logout()
+                append_colored_text(self.status_text, "Admin logout successful", "black")
             except Exception as e:
                 append_colored_text(self.status_text, f"Failed to logout during closing: {str(e)}", "red")
         try:

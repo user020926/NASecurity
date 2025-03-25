@@ -32,15 +32,7 @@ class NASClient:
         return self.ERROR_MESSAGES.get(error_code, f"Uknown error (code: {error_code})")
 
     @retry( stop=stop_after_attempt(3), wait=wait_fixed(2), retry=retry_if_exception_type(requests.RequestException))
-    def login(
-        self,
-        account: str,
-        password: str,
-        status_callback: Any,
-        otp_code: str | None = None,
-        clear_password_callback: Callable[[], None] | None = None,
-        clear_otp_callback: Callable[[], None] | None = None
-    ) -> str:
+    def login(self, account: str, password: str, otp_code: str | None = None, clear_password_callback: Callable[[], None] | None = None, clear_otp_callback: Callable[[], None] | None = None) -> str:
         """Admin login"""
         url = self._build_url("auth.cgi")
         params = {
@@ -60,7 +52,6 @@ class NASClient:
 
         if "data" in data and "sid" in data["data"]:
             self.sid = data["data"]["sid"]
-            status_callback(f"Adimin {account} login successful\n\n", "black")
             return self.sid
 
         error_code = data.get("error", {}).get("code")
@@ -158,7 +149,7 @@ class NASClient:
             raise Exception(f"Failed to remove user: {self._get_error_message(error_code)}")
         return result
 
-    def logout(self, status_callback: Any) -> bool:
+    def logout(self) -> bool:
         """Logout admin"""
         if not self.sid:
             return True
@@ -171,17 +162,11 @@ class NASClient:
             "_sid": self.sid
         }
         
-        try:
-            response = self.session.get(url, params=params, timeout=10)
-            data = response.json()
-            
-            if data.get("success", False):
-                status_callback("Admin logout successful", "black")
-                self.sid = None
-                return True
-            
-            status_callback(f"Failed to logout: {data}", "red")
-            return False
-        except requests.RequestException as e:
-            status_callback(f"Failed to logout: {data}", "red")
-            raise
+        response = self.session.get(url, params=params, timeout=10)
+        data = response.json()
+        
+        if data.get("success", False):
+            self.sid = None
+            return True
+                 
+        raise Exception(f"Failed to login: {data}")
