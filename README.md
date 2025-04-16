@@ -62,7 +62,7 @@ Optional columns:
 1. **`api.py`**  
    Handles communication with the NAS API, including login, checking user existence, user creation, password change, and user deletion.
 
-2. **`NASecurity.py`**  
+2. **`main.py`**  
    The main GUI application responsible for file selection, status updates, and batch operation logic.
 
 ### Key Classes & Methods
