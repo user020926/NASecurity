@@ -46,8 +46,8 @@ class WorkerThread(QThread):
 
             for i, row in df.iterrows():
                 if self.is_canceled:
-                    self.status_update.emit("Operation canceled", "red")
-                    self.log_manager.add_log("", "", "", "Operation canceled", is_error=True)
+                    self.status_update.emit("Operation canceled.", "red")
+                    self.log_manager.add_log("", "", "", "Operation canceled.", is_error=True)
                     break
 
                 user = str(row["Account"]).strip()
@@ -67,7 +67,7 @@ class WorkerThread(QThread):
 
                 self.progress_update.emit(i + 1)
 
-            self.status_update.emit("\nExcecution completed", "black")
+            self.status_update.emit("\nExcecution completed.", "black")
         except Exception as e:
             self.status_update.emit(f"Excecution failed: {str(e)}", "red")
             self.log_manager.add_log("", "", "", f"Excecution failed: {str(e)}", is_error=True)
@@ -287,9 +287,7 @@ class NASecurity(QMainWindow):
 
         try:
             self.nas_client.login(admin, pwd, otp, self.clear_pwd, self.clear_otp)
-            append_colored_text(self.status_text, f"Admin {admin} login success\n", "black")
-            df = pd.read_excel(self.filepath).dropna(subset=["Account"])
-            self.progress.setMaximum(len(df))
+            append_colored_text(self.status_text, f"Admin {admin} login success.\n", "black")
 
             self.worker = WorkerThread(self.nas_client, self.filepath, self.log_manager)
             self.worker.status_update.connect(lambda msg, color: append_colored_text(self.status_text, msg, color))
@@ -297,12 +295,12 @@ class NASecurity(QMainWindow):
             self.worker.finished.connect(self.process_finished)
             self.worker.start()
         except Exception as e:
-            append_colored_text(self.status_text, f"Login failed: {str(e)}", "red")
             self.clear_pwd()
             self.clear_otp()
             self.progress.close()
-            QMessageBox.critical(self, "Error", f"Login failed: {str(e)}")
-            self.log_manager.add_log("", "", "", f"Login failed: {str(e)}", is_error=True)
+            append_colored_text(self.status_text, f"Login failed: {str(e)}.", "red")
+            QMessageBox.critical(self, "Error", f"Login failed: {str(e)}.")
+            self.log_manager.add_log("", "", "", f"Login failed: {str(e)}.", is_error=True)
 
     def validate_inputs(self) -> bool:
         """Verify inputs"""
@@ -351,7 +349,7 @@ class NASecurity(QMainWindow):
         if self.nas_client:
             try:
                 self.nas_client.logout()
-                append_colored_text(self.status_text, "Admin logout successful", "black")
+                append_colored_text(self.status_text, "Admin logout successful.", "black")
             except Exception as e:
                 append_colored_text(self.status_text, f"Failed to logout during cancelation: {str(e)}", "red")
         self.clear_pwd()
@@ -363,13 +361,12 @@ class NASecurity(QMainWindow):
         if self.nas_client and self.nas_client.sid:
             try:
                 self.nas_client.logout()
-                append_colored_text(self.status_text, "Admin logout successful", "black")
             except Exception as e:
-                append_colored_text(self.status_text, f"Failed to logout during closing: {str(e)}", "red")
+                pass
         try:
             self.log_manager.save_to_file()
         except Exception as e:
-            raise
+            pass
         self.clear_pwd()
         self.clear_otp()
         event.accept()
