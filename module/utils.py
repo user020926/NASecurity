@@ -21,7 +21,7 @@ def get_desktop_path() -> str:
 
 def get_log_path(suffix: str) -> str:
     """生成日誌檔案路徑"""
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    date_str = datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
     if suffix == "success":
         filename = f"NASecurity_Log_{date_str}.xlsx"
     else:

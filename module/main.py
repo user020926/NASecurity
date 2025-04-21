@@ -39,6 +39,7 @@ class WorkerThread(QThread):
         """執行緒主邏輯，處理 Excel 中的用戶操作"""
         try:
             df = pd.read_excel(self.filepath)
+            df.columns = df.columns.str.strip()
             required_cols = {"帳號", "作業需求"}
             if not required_cols.issubset(df.columns):
                 missing = required_cols - set(df.columns)
@@ -292,21 +293,19 @@ class NASecurity(QMainWindow):
 
         try:
             self.nas_client.login(admin, pwd, otp, self.clear_pwd, self.clear_otp)
-            append_colored_text(self.status_text, f"管理員 {admin} 登入成功\n", "black")
-            df = pd.read_excel(self.filepath).dropna(subset=["帳號"])
-            self.progress.setMaximum(len(df))
-
+            append_colored_text(self.status_text, f"管理員 {admin} 登入成功。\n", "black")
+            
             self.worker = WorkerThread(self.nas_client, self.filepath, self.log_manager)
             self.worker.status_update.connect(lambda msg, color: append_colored_text(self.status_text, msg, color))
             self.worker.progress_update.connect(self.progress.setValue)
             self.worker.finished.connect(self.process_finished)
             self.worker.start()
         except Exception as e:
-            append_colored_text(self.status_text, f"登入失敗: {str(e)}", "red")
             # logger.error(f"登入失敗: {str(e)}")
             self.clear_pwd()
             self.clear_otp()
             self.progress.close()
+            append_colored_text(self.status_text, f"登入失敗: {str(e)}", "red")
             QMessageBox.critical(self, "錯誤", f"登入失敗: {str(e)}")
             self.log_manager.add_log("", "", "", f"登入失敗: {str(e)}", is_error=True)
 
@@ -374,10 +373,11 @@ class NASecurity(QMainWindow):
         if self.nas_client and self.nas_client.sid:
             try:
                 self.nas_client.logout()
-                append_colored_text(self.status_text, "已登出", "black")
+                # append_colored_text(self.status_text, "已登出", "black")
             except Exception as e:
                 # logger.warning(f"關閉時   失敗: {str(e)}")
-                append_colored_text(self.status_text, f"關閉時登出失敗: {str(e)}", "red")
+                # append_colored_text(self.status_text, f"關閉時登出失敗: {str(e)}", "red")
+                pass
         try:
             self.log_manager.save_to_file()
             # logger.info("關閉時日誌已保存至桌面")
@@ -385,7 +385,7 @@ class NASecurity(QMainWindow):
         except Exception as e:
             # logger.error(f"關閉時日誌保存失敗: {str(e)}")
             # append_colored_text(self.status_text, f"關閉時日誌保存失敗: {str(e)}", "red")
-            raise
+            pass
         self.clear_pwd()
         self.clear_otp()
         event.accept()
