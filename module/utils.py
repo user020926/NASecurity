@@ -5,33 +5,41 @@ import pandas as pd
 from datetime import datetime
 from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor
 from PyQt5.QtWidgets import QTextEdit
-# import logging
 import time
 
-# logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-# logger = logging.getLogger(__name__)
-
 def get_desktop_path() -> str:
-    """獲取桌面路徑"""
+    """獲取當前使用者的桌面路徑
+    Returns:
+        桌面路徑，若不存在則返回當前工作目錄
+    """
     desktop_path = os.path.expanduser("~/Desktop")
     if not os.path.exists(desktop_path):
-        # logger.warning(f"桌面路徑 {desktop_path} 不存在，使用當前工作目錄")
         return os.getcwd()
     return desktop_path
 
 def get_log_path(suffix: str) -> str:
-    """生成日誌檔案路徑"""
+    """生成日誌檔案的儲存路徑
+    Args:
+        suffix: 日誌類型（success 或 error）
+    Returns:
+        日誌檔案的完整路徑
+    """
     date_str = datetime.now().strftime("%Y-%m-%d-%H_%M_%S")
     if suffix == "success":
         filename = f"NASecurity_Log_{date_str}.xlsx"
     else:
         filename = f"NASecurity_Error_Log_{date_str}.xlsx"
     full_path = os.path.join(get_desktop_path(), filename)
-    # logger.info(f"生成日誌路徑: {full_path}")
     return full_path
 
 def generate_random_password(length: int = 12, exclude_chars: str = "") -> str:
-    """生成隨機密碼"""
+    """生成符合安全要求的隨機密碼
+    Args:
+        length: 密碼長度（預設12）
+        exclude_chars: 要排除的字符
+    Returns:
+        生成的隨機密碼
+    """
     alphabet = ''.join(c for c in string.ascii_letters + string.digits + string.punctuation if c not in exclude_chars)
     pwd = [
         secrets.choice(string.ascii_lowercase),
@@ -43,8 +51,9 @@ def generate_random_password(length: int = 12, exclude_chars: str = "") -> str:
     return ''.join(pwd)
 
 class LogManager:
-    """日誌管理器"""
+    """管理成功和錯誤日誌的記錄與儲存"""
     def __init__(self):
+        """初始化日誌管理器"""
         self.success_logs = []
         self.error_logs = []
         self.success_file = get_log_path("success")
@@ -53,7 +62,15 @@ class LogManager:
         self.error_cols = ["時間", "帳號", "工號", "姓名", "錯誤訊息"]
 
     def add_log(self, account: str, emp_id: str, name: str, result: str, new_password: str = "", is_error: bool = False):
-        """添加日誌條目"""
+        """添加日誌條目到成功或錯誤日誌
+        Args:
+            account: 帳號
+            emp_id: 員工編號
+            name: 姓名
+            result: 執行結果或錯誤訊息
+            new_password: 新密碼（僅成功日誌使用）
+            is_error: 是否為錯誤日誌
+        """
         entry = {
             "時間": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "帳號": account,
@@ -69,7 +86,10 @@ class LogManager:
             self.success_logs.append(entry)
 
     def save_to_file(self):
-        """將日誌保存到檔案"""
+        """將日誌儲存到Excel檔案
+        Raises:
+            Exception: 儲存失敗時拋出錯誤
+        """
         for logs, filename, columns in [
             (self.success_logs, self.success_file, self.success_cols),
             (self.error_logs, self.error_file, self.error_cols)
@@ -81,19 +101,21 @@ class LogManager:
                     df = pd.read_excel(filename) if os.path.exists(filename) else pd.DataFrame(columns=columns)
                     df = pd.concat([df, pd.DataFrame(logs)], ignore_index=True)
                     df.to_excel(filename, index=False)
-                    # logger.info(f"保存 {len(logs)} 條日誌到 {filename}")
                     logs.clear()
                     break
                 except PermissionError:
-                    # logger.warning(f"權限拒絕，重試保存: {filename}")
                     time.sleep(1)
                 except Exception as e:
-                    # logger.error(f"保存日誌失敗: {filename} - {str(e)}")
                     if attempt == 2:
                         raise
 
 def append_colored_text(text_widget: QTextEdit, message: str, color: str):
-    """在文本框中添加帶顏色的文字"""
+    """在QTextEdit中添加帶指定顏色的文字
+    Args:
+        text_widget: 目標QTextEdit控件
+        message: 要顯示的訊息
+        color: 文字顏色
+    """
     cursor = text_widget.textCursor()
     cursor.movePosition(QTextCursor.End)
     fmt = QTextCharFormat()

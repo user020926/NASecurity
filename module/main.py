@@ -8,14 +8,15 @@ from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from api import NASClient
 from utils import LogManager, generate_random_password, append_colored_text, get_desktop_path
-# import logging
 from typing import Dict, Any
 
-# logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-# logger = logging.getLogger(__name__)
-
 def resource_path(relative_path):
-    """獲取資源路徑"""
+    """獲取資源檔案的絕對路徑，支援打包後的環境
+    Args:
+        relative_path: 相對路徑
+    Returns:
+        資源的絕對路徑
+    """
     if hasattr(sys, '_MEIPASS'):
         base_path = sys._MEIPASS
     else:
@@ -24,11 +25,17 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 class WorkerThread(QThread):
+    """後台工作執行緒，用於處理Excel中的用戶操作"""
     status_update = pyqtSignal(str, str)
-    progress_update = pyqtSignal(int)
     finished = pyqtSignal()
 
     def __init__(self, nas_client: NASClient, filepath: str, log_manager: 'LogManager'):
+        """初始化工作執行緒
+        Args:
+            nas_client: NAS API客戶端
+            filepath: Excel檔案路徑
+            log_manager: 日誌管理器
+        """
         super().__init__()
         self.nas_client = nas_client
         self.filepath = filepath
@@ -36,7 +43,9 @@ class WorkerThread(QThread):
         self.is_canceled = False
 
     def run(self):
-        """執行緒主邏輯，處理 Excel 中的用戶操作"""
+        """執行緒主邏輯，處理Excel中的用戶操作
+        讀取Excel檔案，根據作業需求執行密碼變更、用戶創建或刪除
+        """
         try:
             df = pd.read_excel(self.filepath)
             df.columns = df.columns.str.strip()
@@ -70,8 +79,6 @@ class WorkerThread(QThread):
                 elif operation == "刪除用戶":
                     self.handle_user_deletion(user, emp_id, name, user_info)
 
-                self.progress_update.emit(i + 1)
-
             self.status_update.emit("\n工具執行完畢", "black")
         except Exception as e:
             self.status_update.emit(f"執行失敗: {str(e)}", "red")
@@ -80,7 +87,12 @@ class WorkerThread(QThread):
             self.finished.emit()
 
     def check_user(self, user: str) -> Dict[str, Any] | None:
-        """檢查用戶是否存在"""
+        """檢查用戶是否存在
+        Args:
+            user: 用戶名
+        Returns:
+            用戶資訊，若不存在則返回None
+        """
         try:
             return self.nas_client.user_exists(user)
         except Exception as e:
@@ -89,7 +101,13 @@ class WorkerThread(QThread):
             return None
 
     def handle_password_change(self, user: str, emp_id: str, name: str, user_info: Dict[str, Any] | None):
-        """處理密碼變更操作"""
+        """處理密碼變更操作
+        Args:
+            user: 用戶名
+            emp_id: 員工編號
+            name: 姓名
+            user_info: 用戶資訊
+        """
         if not user_info:
             self.status_update.emit(f"用戶 {user} 不存在，跳過此用戶", "red")
             self.log_manager.add_log(user, emp_id, name, "用戶不存在", is_error=True)
@@ -108,7 +126,13 @@ class WorkerThread(QThread):
                     self.log_manager.add_log(user, emp_id, name, f"密碼變更失敗: {str(e)}", is_error=True)
 
     def handle_user_creation(self, user: str, emp_id: str, name: str, user_info: Dict[str, Any] | None):
-        """處理用戶創建操作"""
+        """處理用戶創建操作
+        Args:
+            user: 用戶名
+            emp_id: 員工編號
+            name: 姓名
+            user_info: 用戶資訊
+        """
         if user_info:
             self.status_update.emit(f"用戶 {user} 已存在，跳過此用戶", "red")
             self.log_manager.add_log(user, emp_id, name, "用戶已存在", is_error=True)
@@ -124,7 +148,13 @@ class WorkerThread(QThread):
             self.log_manager.add_log(user, emp_id, name, f"創建失敗: {str(e)}", is_error=True)
 
     def handle_user_deletion(self, user: str, emp_id: str, name: str, user_info: Dict[str, Any] | None):
-        """處理用戶刪除操作"""
+        """處理用戶刪除操作
+        Args:
+            user: 用戶名
+            emp_id: 員工編號
+            name: 姓名
+            user_info: 用戶資訊
+        """
         if not user_info:
             self.status_update.emit(f"用戶 {user} 不存在，跳過此用戶", "red")
             self.log_manager.add_log(user, emp_id, name, "用戶不存在", is_error=True)
@@ -139,7 +169,9 @@ class WorkerThread(QThread):
             self.log_manager.add_log(user, emp_id, name, f"刪除失敗: {str(e)}", is_error=True)
 
 class NASecurity(QMainWindow):
+    """NASecurity主視窗，提供NAS用戶管理的圖形介面"""
     def __init__(self):
+        """初始化主視窗"""
         super().__init__()
         self.nas_client: NASClient | None = None
         self.filepath: str | None = None
@@ -148,7 +180,9 @@ class NASecurity(QMainWindow):
         self.setup_ui()
 
     def setup_ui(self):
-        """設置 GUI 界面"""
+        """設置圖形使用者介面
+        包括輸入欄位、按鈕、狀態顯示區等
+        """
         self.setWindowTitle("NASecurity")
         self.setGeometry(100, 100, 1000, 830)
         self.setWindowIcon(QIcon(resource_path("icons/NASecurity.ico")))
@@ -217,7 +251,15 @@ class NASecurity(QMainWindow):
         self.setup_shortcuts()
 
     def add_field(self, layout: QVBoxLayout, label: str, placeholder: str = "", is_password: bool = False) -> QLineEdit:
-        """添加輸入欄位到布局"""
+        """添加輸入欄位到布局
+        Args:
+            layout: 目標布局
+            label: 欄位標籤
+            placeholder: 提示文字
+            is_password: 是否為密碼欄位
+        Returns:
+            創建的QLineEdit物件
+        """
         hbox = QHBoxLayout()
         hbox.addWidget(QLabel(label))
         entry = QLineEdit()
@@ -229,7 +271,12 @@ class NASecurity(QMainWindow):
         return entry
 
     def add_file_field(self, layout: QVBoxLayout) -> QLineEdit:
-        """添加檔案選擇欄位"""
+        """添加檔案選擇欄位
+        Args:
+            layout: 目標布局
+        Returns:
+            創建的QLineEdit物件
+        """
         hbox = QHBoxLayout()
         hbox.addWidget(QLabel("選擇文件:"))
         entry = QLineEdit()
@@ -248,7 +295,7 @@ class NASecurity(QMainWindow):
         self.move((screen.width() - size.width()) // 2, (screen.height() - size.height()) // 2 - 50)
 
     def setup_shortcuts(self):
-        """設置輸入欄位的快捷鍵（按 Enter 切換焦點）"""
+        """設置輸入欄位的Enter鍵快捷鍵，切換焦點"""
         self.ip_entry.returnPressed.connect(lambda: self.port_entry.setFocus())
         self.port_entry.returnPressed.connect(lambda: self.admin_entry.setFocus())
         self.admin_entry.returnPressed.connect(lambda: self.pwd_entry.setFocus())
@@ -256,14 +303,16 @@ class NASecurity(QMainWindow):
         self.otp_entry.returnPressed.connect(self.start_process)
 
     def select_file(self):
-        """打開檔案選擇對話框"""
+        """打開檔案選擇對話框，選擇Excel檔案"""
         filepath, _ = QFileDialog.getOpenFileName(self, "選擇文件", get_desktop_path(), "Excel files (*.xlsx)")
         if filepath:
             self.filepath = filepath
             self.file_entry.setText(filepath)
 
     def start_process(self):
-        """開始處理用戶操作"""
+        """開始處理用戶操作
+        驗證輸入、登入NAS、啟動後台執行緒
+        """
         if not self.validate_inputs():
             return
 
@@ -278,18 +327,10 @@ class NASecurity(QMainWindow):
                 self.nas_client.logout()
                 append_colored_text(self.status_text, "已登出舊會話", "black")
             except Exception as e:
-                # logger.warning(f"舊會話登出失敗: {str(e)}")
                 append_colored_text(self.status_text, f"舊會話登出失敗: {str(e)}", "red")
 
         self.nas_client = NASClient(nas_ip, nas_port)
         self.status_text.clear()
-
-        self.progress = QProgressDialog("處理中...", "取消", 0, 100, self)
-        self.progress.setWindowTitle("NASecurity")
-        self.progress.setWindowModality(Qt.WindowModal)
-        self.progress.setMinimumDuration(0)
-        self.progress.canceled.connect(self.cancel_process)
-        self.progress.setFixedSize(400, 150)
 
         try:
             self.nas_client.login(admin, pwd, otp, self.clear_pwd, self.clear_otp)
@@ -297,20 +338,20 @@ class NASecurity(QMainWindow):
             
             self.worker = WorkerThread(self.nas_client, self.filepath, self.log_manager)
             self.worker.status_update.connect(lambda msg, color: append_colored_text(self.status_text, msg, color))
-            self.worker.progress_update.connect(self.progress.setValue)
             self.worker.finished.connect(self.process_finished)
             self.worker.start()
         except Exception as e:
-            # logger.error(f"登入失敗: {str(e)}")
-            self.clear_pwd()
-            self.clear_otp()
-            self.progress.close()
+            # self.clear_pwd()
+            # self.clear_otp()
             append_colored_text(self.status_text, f"登入失敗: {str(e)}", "red")
             QMessageBox.critical(self, "錯誤", f"登入失敗: {str(e)}")
             self.log_manager.add_log("", "", "", f"登入失敗: {str(e)}", is_error=True)
 
     def validate_inputs(self) -> bool:
-        """驗證輸入是否有效"""
+        """驗證輸入欄位是否有效
+        Returns:
+            是否通過驗證
+        """
         if not self.filepath:
             QMessageBox.critical(self, "錯誤", "請選擇文件")
             return False
@@ -332,27 +373,24 @@ class NASecurity(QMainWindow):
     def clear_pwd(self):
         """清空密碼欄位"""
         self.pwd_entry.clear()
-        # logger.info("管理員密碼欄位已清空")
+        self.pwd_entry.setFocus()
 
     def clear_otp(self):
         """清空雙重驗證碼欄位"""
         self.otp_entry.clear()
-        # logger.info("雙重驗證碼欄位已清空")
+        self.pwd_entry.setFocus()
 
     def process_finished(self):
         """處理完成後的清理工作"""
-        self.progress.close()
         self.file_entry.clear()
         try:
             self.log_manager.save_to_file()
-            # logger.info("日誌已保存至桌面")
         except Exception as e:
-            # logger.error(f"日誌保存失敗: {str(e)}")
             append_colored_text(self.status_text, f"日誌保存失敗: {str(e)}", "red")
             QMessageBox.critical(self, "錯誤", f"日誌保存失敗: {str(e)}")
         self.clear_pwd()
         self.clear_otp()
-
+        
     def cancel_process(self):
         """取消操作的處理"""
         if self.worker:
@@ -362,28 +400,27 @@ class NASecurity(QMainWindow):
                 self.nas_client.logout()
                 append_colored_text(self.status_text, "已登出", "black")
             except Exception as e:
-                # logger.warning(f"取消時登出失敗: {str(e)}")
                 append_colored_text(self.status_text, f"取消時登出失敗: {str(e)}", "red")
-        self.clear_pwd()
-        self.clear_otp()
+            self.clear_pwd()
+            self.clear_otp()     
         self.process_finished()
 
     def closeEvent(self, event):
-        """視窗關閉時的事件處理"""
+        """處理視窗關閉事件
+        Args:
+            event: 關閉事件
+        """
         if self.nas_client and self.nas_client.sid:
             try:
                 self.nas_client.logout()
                 # append_colored_text(self.status_text, "已登出", "black")
             except Exception as e:
-                # logger.warning(f"關閉時   失敗: {str(e)}")
                 # append_colored_text(self.status_text, f"關閉時登出失敗: {str(e)}", "red")
                 pass
         try:
             self.log_manager.save_to_file()
-            # logger.info("關閉時日誌已保存至桌面")
             # append_colored_text(self.status_text, "關閉時日誌已保存至桌面", "black")
         except Exception as e:
-            # logger.error(f"關閉時日誌保存失敗: {str(e)}")
             # append_colored_text(self.status_text, f"關閉時日誌保存失敗: {str(e)}", "red")
             pass
         self.clear_pwd()
@@ -391,7 +428,7 @@ class NASecurity(QMainWindow):
         event.accept()
 
 if __name__ == "__main__":
-    """程式入口"""
+    """程式入口，啟動GUI應用"""
     app = QApplication(sys.argv)
     app.setFont(QFont("Yu Gothic UI", 12))
     window = NASecurity()
