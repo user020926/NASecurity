@@ -29,10 +29,11 @@ NASecurity 是一款基於 PyQt5 的圖形化工具，用於管理 NAS 設備上
 
 ---
 
-## 安裝與運行
+## 安裝與執行
 
-### 安裝步驟
-下載檔案並解壓縮，進入 /dist/NASecurity ，複製 NASecurity.exe 路徑，在桌面創建捷徑後即可執行。
+1. 下載並解壓縮專案檔案。
+2. 進入 `/dist/NASecurity` 目錄，複製 `NASecurity.exe` 路徑。
+3. 建議於桌面建立捷徑，雙擊即可執行。
 
 ---
 
